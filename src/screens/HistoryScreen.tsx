@@ -6,7 +6,7 @@ import { Session } from '../types';
 
 interface Props {
   sessions: Session[];
-  onStart: (title: string) => void;
+  onStart: (title: string, decadeGoalId?: string) => void;
 }
 
 function dayLabel(dateKey: string): string {
@@ -50,13 +50,23 @@ export default function HistoryScreen({ sessions, onStart }: Props) {
         <Text style={styles.day}>{section.title}</Text>
       )}
       renderItem={({ item }) => (
-        <Pressable style={styles.row} onPress={() => onStart(item.goalTitle)}>
+        <Pressable
+          style={styles.row}
+          onPress={() => onStart(item.goalTitle, item.decadeGoalId)}
+        >
           <Text style={[styles.mark, !item.completed && styles.markFail]}>
             {item.completed ? '✓' : '✗'}
           </Text>
-          <Text style={styles.title} numberOfLines={1}>
-            {item.goalTitle}
-          </Text>
+          <View style={styles.titleBlock}>
+            <Text style={styles.title} numberOfLines={1}>
+              {item.goalTitle}
+            </Text>
+            {item.decadeGoalTitle ? (
+              <Text style={styles.decade} numberOfLines={1}>
+                {item.decadeGoalTitle}
+              </Text>
+            ) : null}
+          </View>
           <Text style={styles.time}>
             {new Date(item.startedAt).toLocaleTimeString(undefined, {
               hour: '2-digit',
@@ -92,6 +102,8 @@ const styles = StyleSheet.create({
   },
   mark: { width: 24, fontSize: 15, color: colors.accent },
   markFail: { color: colors.dim },
-  title: { flex: 1, color: colors.text, fontSize: 15 },
+  titleBlock: { flex: 1 },
+  title: { color: colors.text, fontSize: 15 },
+  decade: { color: colors.dim, fontSize: 12, marginTop: 2 },
   time: { color: colors.dim, fontSize: 13, marginLeft: spacing.sm },
 });

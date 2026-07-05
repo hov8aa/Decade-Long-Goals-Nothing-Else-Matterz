@@ -6,22 +6,27 @@ import HistoryScreen from './src/screens/HistoryScreen';
 import TimerScreen from './src/screens/TimerScreen';
 import TodayScreen from './src/screens/TodayScreen';
 import {
+  loadDecadeGoals,
   loadGoals,
   loadSessions,
+  MAX_DECADE_GOALS,
   newId,
+  saveDecadeGoals,
   saveGoals,
   saveSessions,
   SESSION_SECONDS,
   todayKey,
 } from './src/storage';
 import { colors, spacing } from './src/theme';
-import { Goal, Session } from './src/types';
+import { DecadeGoal, Goal, Session } from './src/types';
 
 type Screen = 'today' | 'history' | 'timer';
 
 export default function App() {
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>('today');
+  const [decadeGoals, setDecadeGoals] = useState<DecadeGoal[]>([]);
+  const [selectedDecadeId, setSelectedDecadeId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -30,7 +35,11 @@ export default function App() {
   // finalize as incomplete anything older left open by a killed app.
   useEffect(() => {
     (async () => {
-      const [g, s] = await Promise.all([loadGoals(), loadSessions()]);
+      const [d, g, s] = await Promise.all([
+        loadDecadeGoals(),
+        loadGoals(),
+        loadSessions(),
+      ]);
       let resumeId: string | null = null;
       let changed = false;
       const fixed = s.map((sess) => {
@@ -46,6 +55,8 @@ export default function App() {
           completed: false,
         };
       });
+      setDecadeGoals(d);
+      if (d.length > 0) setSelectedDecadeId(d[0].id);
       setGoals(g);
       setSessions(fixed);
       if (changed) saveSessions(fixed);
@@ -57,24 +68,49 @@ export default function App() {
     })();
   }, []);
 
-  const startSession = useCallback(
+  const addDecadeGoal = useCallback(
     (title: string) => {
+      if (decadeGoals.length >= MAX_DECADE_GOALS) return;
+      const goal: DecadeGoal = { id: newId(), title: title.trim(), createdAt: Date.now() };
+      const next = [...decadeGoals, goal];
+      setDecadeGoals(next);
+      saveDecadeGoals(next);
+      setSelectedDecadeId(goal.id);
+    },
+    [decadeGoals]
+  );
+
+  const startSession = useCallback(
+    (title: string, decadeGoalId?: string) => {
       const now = Date.now();
+      // Which decade goal does this 10-minute goal serve?
+      const decade =
+        decadeGoals.find((d) => d.id === (decadeGoalId ?? selectedDecadeId)) ??
+        null;
       let goal = goals.find(
         (g) => g.title.toLowerCase() === title.trim().toLowerCase()
       );
       let nextGoals: Goal[];
       if (goal) {
-        goal = { ...goal, lastUsedAt: now };
+        // Reusing a goal adopts it into the decade goal it's started under.
+        goal = { ...goal, lastUsedAt: now, decadeGoalId: decade?.id ?? goal.decadeGoalId };
         nextGoals = goals.map((g) => (g.id === goal!.id ? goal! : g));
       } else {
-        goal = { id: newId(), title: title.trim(), createdAt: now, lastUsedAt: now };
+        goal = {
+          id: newId(),
+          title: title.trim(),
+          createdAt: now,
+          lastUsedAt: now,
+          decadeGoalId: decade?.id,
+        };
         nextGoals = [...goals, goal];
       }
       const session: Session = {
         id: newId(),
         goalId: goal.id,
         goalTitle: goal.title,
+        decadeGoalId: decade?.id,
+        decadeGoalTitle: decade?.title,
         dateKey: todayKey(),
         startedAt: now,
         endedAt: null,
@@ -88,7 +124,7 @@ export default function App() {
       setActiveId(session.id);
       setScreen('timer');
     },
-    [goals, sessions]
+    [decadeGoals, selectedDecadeId, goals, sessions]
   );
 
   const finishActive = useCallback(
@@ -150,6 +186,10 @@ export default function App() {
             </View>
             {screen === 'today' ? (
               <TodayScreen
+                decadeGoals={decadeGoals}
+                selectedDecadeId={selectedDecadeId}
+                onSelectDecade={setSelectedDecadeId}
+                onAddDecade={addDecadeGoal}
                 goals={goals}
                 todaySessions={todaySessions}
                 onStart={startSession}

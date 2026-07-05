@@ -60,6 +60,9 @@ export default function TimerScreen({ session, onComplete, onGiveUp, onExit }: P
 
   return (
     <View style={styles.container}>
+      {session.decadeGoalTitle ? (
+        <Text style={styles.decade}>{session.decadeGoalTitle}</Text>
+      ) : null}
       <Text style={styles.goal}>{session.goalTitle}</Text>
       <Text style={styles.clock}>
         {mm}:{ss}
@@ -81,6 +84,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+  decade: {
+    color: colors.accent,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
   },
   goal: {
     color: colors.dim,

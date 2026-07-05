@@ -1,11 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Goal, Session } from './types';
+import { DecadeGoal, Goal, Session } from './types';
 
+const DECADE_GOALS_KEY = '10mg.decadeGoals';
 const GOALS_KEY = '10mg.goals';
 const SESSIONS_KEY = '10mg.sessions';
 
 // Session length in seconds. Drop to e.g. 10 for quick manual testing.
 export const SESSION_SECONDS = 600;
+
+// The core constraint: ten decade-long goals, never more.
+export const MAX_DECADE_GOALS = 10;
 
 export function todayKey(d: Date = new Date()): string {
   const y = d.getFullYear();
@@ -25,6 +29,14 @@ async function loadList<T>(key: string): Promise<T[]> {
   } catch {
     return [];
   }
+}
+
+export function loadDecadeGoals(): Promise<DecadeGoal[]> {
+  return loadList<DecadeGoal>(DECADE_GOALS_KEY);
+}
+
+export function saveDecadeGoals(goals: DecadeGoal[]): Promise<void> {
+  return AsyncStorage.setItem(DECADE_GOALS_KEY, JSON.stringify(goals));
 }
 
 export function loadGoals(): Promise<Goal[]> {
