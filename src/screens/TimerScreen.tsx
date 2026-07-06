@@ -1,9 +1,8 @@
 import { useKeepAwake } from 'expo-keep-awake';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
-import { SESSION_SECONDS } from '../storage';
+import { SESSION_SECONDS, Session } from '../model/sessions';
 import { colors, spacing } from '../theme';
-import { Session } from '../types';
 
 interface Props {
   session: Session;
@@ -60,9 +59,7 @@ export default function TimerScreen({ session, onComplete, onGiveUp, onExit }: P
 
   return (
     <View style={styles.container}>
-      {session.decadeGoalTitle ? (
-        <Text style={styles.decade}>{session.decadeGoalTitle}</Text>
-      ) : null}
+      <Text style={styles.decade}>{session.servedWording}</Text>
       <Text style={styles.goal}>{session.goalTitle}</Text>
       <Text style={styles.clock}>
         {mm}:{ss}

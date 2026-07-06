@@ -1,26 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DecadeGoal, Goal, Session } from './types';
+import { Chapter } from './model/chapters';
+import { Session } from './model/sessions';
+import { Goal } from './types';
 
-const DECADE_GOALS_KEY = '10mg.decadeGoals';
+const CHAPTERS_KEY = '10mg.chapters';
 const GOALS_KEY = '10mg.goals';
 const SESSIONS_KEY = '10mg.sessions';
-
-// Session length in seconds. Drop to e.g. 10 for quick manual testing.
-export const SESSION_SECONDS = 600;
-
-// The core constraint: ten decade-long goals, never more.
-export const MAX_DECADE_GOALS = 10;
-
-export function todayKey(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-export function newId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
 
 async function loadList<T>(key: string): Promise<T[]> {
   try {
@@ -31,12 +16,12 @@ async function loadList<T>(key: string): Promise<T[]> {
   }
 }
 
-export function loadDecadeGoals(): Promise<DecadeGoal[]> {
-  return loadList<DecadeGoal>(DECADE_GOALS_KEY);
+export function loadChapters(): Promise<Chapter[]> {
+  return loadList<Chapter>(CHAPTERS_KEY);
 }
 
-export function saveDecadeGoals(goals: DecadeGoal[]): Promise<void> {
-  return AsyncStorage.setItem(DECADE_GOALS_KEY, JSON.stringify(goals));
+export function saveChapters(chapters: Chapter[]): Promise<void> {
+  return AsyncStorage.setItem(CHAPTERS_KEY, JSON.stringify(chapters));
 }
 
 export function loadGoals(): Promise<Goal[]> {

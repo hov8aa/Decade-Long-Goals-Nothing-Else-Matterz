@@ -1,12 +1,14 @@
 import React from 'react';
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
-import { todayKey } from '../storage';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Chapter } from '../model/chapters';
+import { HistoryItem, buildHistory, groupByDay } from '../model/history';
+import { Session, todayKey } from '../model/sessions';
 import { colors, spacing } from '../theme';
-import { Session } from '../types';
 
 interface Props {
   sessions: Session[];
-  onStart: (title: string, decadeGoalId?: string) => void;
+  chapters: Chapter[];
+  onStart: (title: string) => void;
 }
 
 function dayLabel(dateKey: string): string {
@@ -16,23 +18,73 @@ function dayLabel(dateKey: string): string {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
   });
 }
 
-export default function HistoryScreen({ sessions, onStart }: Props) {
-  const byDay = new Map<string, Session[]>();
-  for (const s of sessions) {
-    const list = byDay.get(s.dateKey) ?? [];
-    list.push(s);
-    byDay.set(s.dateKey, list);
-  }
-  const dayKeys = [...byDay.keys()].sort().reverse();
-  const data = dayKeys.map((key) => ({
-    title: dayLabel(key),
-    data: [...byDay.get(key)!].sort((a, b) => b.startedAt - a.startedAt),
-  }));
+function timeLabel(t: number): string {
+  return new Date(t).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
-  if (sessions.length === 0) {
+function durationLabel(s: Session): string {
+  if (s.completed) return '10 min';
+  if (s.endedAt === null) return 'running';
+  const sec = Math.round((s.endedAt - s.startedAt) / 1000);
+  const m = Math.floor(sec / 60);
+  const r = String(sec % 60).padStart(2, '0');
+  return `gave up ${m}:${r}`;
+}
+
+function SessionRow({
+  session,
+  onStart,
+}: {
+  session: Session;
+  onStart: (title: string) => void;
+}) {
+  return (
+    <Pressable style={styles.row} onPress={() => onStart(session.goalTitle)}>
+      <Text style={[styles.mark, !session.completed && styles.markFail]}>
+        {session.completed ? '✓' : '✗'}
+      </Text>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={1}>
+          {session.goalTitle}
+        </Text>
+        <Text style={styles.rowSub} numberOfLines={1}>
+          served: {session.servedWording} · v{session.servedVersion}
+        </Text>
+      </View>
+      <Text style={styles.rowMeta}>
+        {timeLabel(session.startedAt)}
+        {'\n'}
+        {durationLabel(session)}
+      </Text>
+    </Pressable>
+  );
+}
+
+function EvolutionRow({ item }: { item: Extract<HistoryItem, { kind: 'evolution' }> }) {
+  return (
+    <View style={styles.evolution}>
+      <Text style={styles.evolutionLabel}>
+        NORTH STAR EVOLVED · V{item.toVersion - 1} → V{item.toVersion}
+      </Text>
+      <Text style={styles.evolutionText} numberOfLines={2}>
+        {item.fromWording} → {item.toWording}
+      </Text>
+      <Text style={styles.evolutionWhy}>“{item.reasoning}”</Text>
+    </View>
+  );
+}
+
+export default function HistoryScreen({ sessions, chapters, onStart }: Props) {
+  const groups = groupByDay(buildHistory(sessions, chapters));
+
+  if (groups.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyText}>No sessions yet. Go do 10 minutes.</Text>
@@ -41,41 +93,24 @@ export default function HistoryScreen({ sessions, onStart }: Props) {
   }
 
   return (
-    <SectionList
-      style={styles.list}
-      contentContainerStyle={{ padding: spacing.lg }}
-      sections={data}
-      keyExtractor={(s) => s.id}
-      renderSectionHeader={({ section }) => (
-        <Text style={styles.day}>{section.title}</Text>
-      )}
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.row}
-          onPress={() => onStart(item.goalTitle, item.decadeGoalId)}
-        >
-          <Text style={[styles.mark, !item.completed && styles.markFail]}>
-            {item.completed ? '✓' : '✗'}
-          </Text>
-          <View style={styles.titleBlock}>
-            <Text style={styles.title} numberOfLines={1}>
-              {item.goalTitle}
-            </Text>
-            {item.decadeGoalTitle ? (
-              <Text style={styles.decade} numberOfLines={1}>
-                {item.decadeGoalTitle}
-              </Text>
-            ) : null}
-          </View>
-          <Text style={styles.time}>
-            {new Date(item.startedAt).toLocaleTimeString(undefined, {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
-        </Pressable>
-      )}
-    />
+    <ScrollView style={styles.list} contentContainerStyle={{ padding: spacing.lg }}>
+      {groups.map((group) => (
+        <View key={group.dateKey}>
+          <Text style={styles.day}>{dayLabel(group.dateKey)}</Text>
+          {group.items.map((item) =>
+            item.kind === 'session' ? (
+              <SessionRow
+                key={item.session.id}
+                session={item.session}
+                onStart={onStart}
+              />
+            ) : (
+              <EvolutionRow key={`evo-${item.at}`} item={item} />
+            )
+          )}
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -97,13 +132,34 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: 10,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingVertical: 10,
     marginBottom: spacing.sm,
   },
   mark: { width: 24, fontSize: 15, color: colors.accent },
   markFail: { color: colors.dim },
-  titleBlock: { flex: 1 },
-  title: { color: colors.text, fontSize: 15 },
-  decade: { color: colors.dim, fontSize: 12, marginTop: 2 },
-  time: { color: colors.dim, fontSize: 13, marginLeft: spacing.sm },
+  rowBody: { flex: 1 },
+  rowTitle: { color: colors.text, fontSize: 15 },
+  rowSub: { color: colors.dim, fontSize: 11, marginTop: 2 },
+  rowMeta: {
+    color: colors.dim,
+    fontSize: 11,
+    textAlign: 'right',
+    marginLeft: spacing.sm,
+  },
+  evolution: {
+    backgroundColor: colors.card,
+    borderColor: colors.accent,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  evolutionLabel: {
+    color: colors.accent,
+    fontSize: 11,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  evolutionText: { color: colors.text, fontSize: 14, marginBottom: 4 },
+  evolutionWhy: { color: colors.dim, fontSize: 12, fontStyle: 'italic' },
 });

@@ -2,120 +2,109 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Chapter,
+  commitChapter,
+  evolve,
+  liveChapter,
+  newId,
+} from './src/model/chapters';
+import {
+  Session,
+  finalizeDangling,
+  startSession,
+  todayKey,
+} from './src/model/sessions';
+import CeremonyScreen from './src/screens/CeremonyScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
+import NorthStarScreen from './src/screens/NorthStarScreen';
 import TimerScreen from './src/screens/TimerScreen';
 import TodayScreen from './src/screens/TodayScreen';
 import {
-  loadDecadeGoals,
+  loadChapters,
   loadGoals,
   loadSessions,
-  MAX_DECADE_GOALS,
-  newId,
-  saveDecadeGoals,
+  saveChapters,
   saveGoals,
   saveSessions,
-  SESSION_SECONDS,
-  todayKey,
 } from './src/storage';
 import { colors, spacing } from './src/theme';
-import { DecadeGoal, Goal, Session } from './src/types';
+import { Goal } from './src/types';
 
-type Screen = 'today' | 'history' | 'timer';
+type Screen = 'loading' | 'ceremony' | 'today' | 'history' | 'northstar' | 'timer';
 
 export default function App() {
-  const [ready, setReady] = useState(false);
-  const [screen, setScreen] = useState<Screen>('today');
-  const [decadeGoals, setDecadeGoals] = useState<DecadeGoal[]>([]);
-  const [selectedDecadeId, setSelectedDecadeId] = useState<string | null>(null);
+  const [screen, setScreen] = useState<Screen>('loading');
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Load stored data; resume a session still inside its 10-minute window,
-  // finalize as incomplete anything older left open by a killed app.
   useEffect(() => {
     (async () => {
-      const [d, g, s] = await Promise.all([
-        loadDecadeGoals(),
+      const [c, g, s] = await Promise.all([
+        loadChapters(),
         loadGoals(),
         loadSessions(),
       ]);
-      let resumeId: string | null = null;
-      let changed = false;
-      const fixed = s.map((sess) => {
-        if (sess.endedAt !== null) return sess;
-        if (Date.now() - sess.startedAt < SESSION_SECONDS * 1000) {
-          resumeId = sess.id;
-          return sess;
-        }
-        changed = true;
-        return {
-          ...sess,
-          endedAt: sess.startedAt + SESSION_SECONDS * 1000,
-          completed: false,
-        };
-      });
-      setDecadeGoals(d);
-      if (d.length > 0) setSelectedDecadeId(d[0].id);
+      const fixed = finalizeDangling(s, Date.now());
+      setChapters(c);
       setGoals(g);
-      setSessions(fixed);
-      if (changed) saveSessions(fixed);
-      if (resumeId) {
-        setActiveId(resumeId);
+      setSessions(fixed.sessions);
+      if (fixed.changed) saveSessions(fixed.sessions);
+      if (fixed.resumeId) {
+        setActiveId(fixed.resumeId);
         setScreen('timer');
+      } else if (liveChapter(c) === null) {
+        setScreen('ceremony');
+      } else {
+        setScreen('today');
       }
-      setReady(true);
     })();
   }, []);
 
-  const addDecadeGoal = useCallback(
-    (title: string) => {
-      if (decadeGoals.length >= MAX_DECADE_GOALS) return;
-      const goal: DecadeGoal = { id: newId(), title: title.trim(), createdAt: Date.now() };
-      const next = [...decadeGoals, goal];
-      setDecadeGoals(next);
-      saveDecadeGoals(next);
-      setSelectedDecadeId(goal.id);
+  const onCommit = useCallback(
+    (wording: string, reasoning: string) => {
+      const next = commitChapter(chapters, wording, reasoning, Date.now());
+      setChapters(next);
+      saveChapters(next);
+      setScreen('today');
     },
-    [decadeGoals]
+    [chapters]
   );
 
-  const startSession = useCallback(
-    (title: string, decadeGoalId?: string) => {
+  const onEvolve = useCallback(
+    (wording: string, reasoning: string) => {
+      const next = evolve(chapters, wording, reasoning, Date.now());
+      setChapters(next);
+      saveChapters(next);
+    },
+    [chapters]
+  );
+
+  const startSessionUI = useCallback(
+    (title: string) => {
+      const live = liveChapter(chapters);
+      if (!live) return;
       const now = Date.now();
-      // Which decade goal does this 10-minute goal serve?
-      const decade =
-        decadeGoals.find((d) => d.id === (decadeGoalId ?? selectedDecadeId)) ??
-        null;
       let goal = goals.find(
         (g) => g.title.toLowerCase() === title.trim().toLowerCase()
       );
       let nextGoals: Goal[];
       if (goal) {
-        // Reusing a goal adopts it into the decade goal it's started under.
-        goal = { ...goal, lastUsedAt: now, decadeGoalId: decade?.id ?? goal.decadeGoalId };
+        goal = { ...goal, lastUsedAt: now };
         nextGoals = goals.map((g) => (g.id === goal!.id ? goal! : g));
       } else {
-        goal = {
-          id: newId(),
-          title: title.trim(),
-          createdAt: now,
-          lastUsedAt: now,
-          decadeGoalId: decade?.id,
-        };
+        goal = { id: newId(), title: title.trim(), createdAt: now, lastUsedAt: now };
         nextGoals = [...goals, goal];
       }
-      const session: Session = {
-        id: newId(),
+      const session = startSession({
         goalId: goal.id,
         goalTitle: goal.title,
-        decadeGoalId: decade?.id,
-        decadeGoalTitle: decade?.title,
-        dateKey: todayKey(),
-        startedAt: now,
-        endedAt: null,
-        completed: false,
-      };
+        live,
+        now,
+        id: newId(),
+      });
       const nextSessions = [...sessions, session];
       setGoals(nextGoals);
       setSessions(nextSessions);
@@ -124,7 +113,7 @@ export default function App() {
       setActiveId(session.id);
       setScreen('timer');
     },
-    [decadeGoals, selectedDecadeId, goals, sessions]
+    [chapters, goals, sessions]
   );
 
   const finishActive = useCallback(
@@ -152,6 +141,7 @@ export default function App() {
     setScreen('today');
   }, []);
 
+  const live = screen === 'loading' ? null : liveChapter(chapters);
   const active = activeId ? sessions.find((s) => s.id === activeId) : null;
   const todaySessions = sessions.filter((s) => s.dateKey === todayKey());
 
@@ -159,20 +149,26 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.root}>
         <StatusBar style="light" />
-        {!ready ? null : screen === 'timer' && active ? (
+        {screen === 'loading' ? null : screen === 'ceremony' ? (
+          <CeremonyScreen onCommit={onCommit} />
+        ) : screen === 'timer' && active ? (
           <TimerScreen
             session={active}
             onComplete={onComplete}
             onGiveUp={onGiveUp}
             onExit={onExit}
           />
+        ) : screen === 'northstar' && live ? (
+          <NorthStarScreen
+            chapter={live}
+            onEvolve={onEvolve}
+            onBack={() => setScreen('today')}
+          />
         ) : (
           <>
             <View style={styles.tabs}>
               <Pressable onPress={() => setScreen('today')} style={styles.tab}>
-                <Text
-                  style={[styles.tabText, screen === 'today' && styles.tabActive]}
-                >
+                <Text style={[styles.tabText, screen === 'today' && styles.tabActive]}>
                   Today
                 </Text>
               </Pressable>
@@ -184,18 +180,20 @@ export default function App() {
                 </Text>
               </Pressable>
             </View>
-            {screen === 'today' ? (
+            {screen === 'today' && live ? (
               <TodayScreen
-                decadeGoals={decadeGoals}
-                selectedDecadeId={selectedDecadeId}
-                onSelectDecade={setSelectedDecadeId}
-                onAddDecade={addDecadeGoal}
+                chapter={live}
                 goals={goals}
                 todaySessions={todaySessions}
-                onStart={startSession}
+                onStart={startSessionUI}
+                onOpenNorthStar={() => setScreen('northstar')}
               />
             ) : (
-              <HistoryScreen sessions={sessions} onStart={startSession} />
+              <HistoryScreen
+                sessions={sessions}
+                chapters={chapters}
+                onStart={startSessionUI}
+              />
             )}
           </>
         )}

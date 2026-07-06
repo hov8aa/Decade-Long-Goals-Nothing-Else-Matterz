@@ -15,6 +15,7 @@ I am the scientist, the subject, and the data here — so every pause gets logge
 | 2026-03-08 | — | Repo born. One line: "a simple app for focussed work." Nothing else. |
 | 2026-06-11 | 95 days | First real code. Full MVP in one sitting — Expo, 10-minute timer, fresh-start-daily view, history. Committed locally. Never pushed. Never even opened it in a browser. |
 | 2026-07-05 | 24 days | Came back. The hypothesis got deeper. This log exists now. |
+| 2026-07-06 | 1 day | Back-to-back days — a first for this repo. v0.3 designed, spec'd, test-driven, built, verified. |
 
 Three touches in 119 days, for an app whose whole premise is daily touches. Note that.
 
@@ -51,3 +52,18 @@ So the structure inverts:
 A 10-minute session that serves nothing decade-long is just a timer. A decade goal with no 10-minute sessions is just a wish. The app now lives in the space between those two failure modes.
 
 Whether 10 minutes a day can actually carry a decade — that's the experiment. Check the frequency table above to see how it's going.
+
+## v0.3 — The North Star (2026-07-06)
+
+v0.2 lived one day. Building it revealed the misreading: "10 Decade-Long Goals" was never ten goals. It's one goal, and the ten was always the minutes.
+
+So v0.3 inverts again, harder. **One decade-long goal.** Not ten, not a list — one, and the code physically cannot hold two. The timeline underneath (a life as successive decade chapters) exists in storage, invisible, waiting years to matter.
+
+What earned its place this version:
+
+- **The commitment ceremony.** Setting the goal stopped being a form. Terms stated like a contract — 3,653 days charged whether you commit or not, ×100 paid only on persistence, no refunds. Then you retype the goal by hand. Then you hold a button for ten unbroken seconds. Release early, it resets. The entry fee is paid in the only coin this app deals in.
+- **Evolution with reasoning, never replacement.** The goal can be rewritten, but the old wording and its why stay in the trail forever. Reading the trail costs one tap. Changing it costs ten, inside two-second windows. The asymmetry is the design.
+- **The rule of tens** surfaced on its own: 10 seconds to commit, 10 taps to evolve, 10 minutes to act, 10 years to arrive.
+- **Spec before code.** 19 requirements, 8 named exceptions, 41 tests written red before a line of implementation. The suite went green without editing a test.
+
+Note the frequency table: two consecutive days for the first time in this repo's life. The app about showing up is finally being built like someone shows up for it. Whether that holds — same experiment, same table.
