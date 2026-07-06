@@ -42,6 +42,19 @@ One protagonist. One decade-long goal. 10-minute sessions serve it. Everything b
 
 - **R19 —** 10 seconds to commit · 10 taps to evolve · 10 minutes to act · 10 years to arrive. Constants: `COMMIT_HOLD_SECONDS = 10`, `EVOLVE_TAPS = 10`, `SESSION_SECONDS = 600`.
 
-## Out of scope (v0.4+)
+## Out of scope — deferred features (v0.4+)
 
-Succession ceremony, related goals (full web, reasoned links), milestones, multi-protagonist, push, app-store builds.
+Succession ceremony, related goals (full web, reasoned links), milestones, multi-protagonist, notifications, app-store builds, data export/backup, cross-day streaks.
+
+## Exceptions — accepted, not deferred
+
+Known behaviors this version deliberately does not handle. Each is a decision, not an oversight.
+
+- **X1 — No escape hatch.** The app offers no way to delete, reset, or un-commit the decade goal. Quitting means wiping the app's data at the OS level. The commitment is only as heavy as its absence of exits.
+- **X2 — No backup, no sync.** All data lives in on-device storage. A lost or reset device loses the decade record; in a browser, cleared site data does the same. Export lands before any second protagonist does.
+- **X3 — The clock is trusted.** Timers are timestamp-based against the device clock. A protagonist who moves their system clock can fake a completed session. The app defends against drift and backgrounding, not against self-deception — that contest can't be won in code.
+- **X4 — Midnight belongs to the start.** A session started 23:55 and finished 00:05 counts for the day it started. Fresh start is defined by start time, not end time.
+- **X5 — One device is one protagonist.** Two devices are two independent worlds. No merging, no conflict resolution.
+- **X6 — The past cannot be edited.** No session, version, or reasoning is ever editable or deletable — typos included. The only mutation the app knows is appending: a new session, a new version.
+- **X7 — The rituals are not yet accessible.** Ten taps and a ten-second hold assume touch and sight. Assistive-technology equivalents are unresolved in this version.
+- **X8 — The ×100 return is a term, not a feature.** The app states it in the ceremony and never measures, tracks, or displays it. The payout happens outside the app.
