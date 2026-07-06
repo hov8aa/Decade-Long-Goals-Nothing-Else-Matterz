@@ -1,4 +1,4 @@
-import { Chapter } from './chapters';
+import { Chapter, currentVersion } from './chapters';
 
 export const SESSION_SECONDS = 600;
 
@@ -15,8 +15,11 @@ export interface Session {
   completed: boolean;
 }
 
-export function todayKey(d?: Date): string {
-  throw new Error('not implemented');
+export function todayKey(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function startSession(args: {
@@ -26,7 +29,31 @@ export function startSession(args: {
   now: number;
   id: string;
 }): Session {
-  throw new Error('not implemented');
+  const { goalId, goalTitle, live, now, id } = args;
+  const version = currentVersion(live);
+  return {
+    id,
+    goalId,
+    goalTitle,
+    chapterId: live.id,
+    servedWording: version.wording,
+    servedVersion: live.versions.length,
+    dateKey: todayKey(new Date(now)),
+    startedAt: now,
+    endedAt: null,
+    completed: false,
+  };
+}
+
+function endSession(
+  sessions: Session[],
+  id: string,
+  now: number,
+  completed: boolean
+): Session[] {
+  return sessions.map((s) =>
+    s.id === id ? { ...s, endedAt: now, completed } : s
+  );
 }
 
 export function completeSession(
@@ -34,7 +61,7 @@ export function completeSession(
   id: string,
   now: number
 ): Session[] {
-  throw new Error('not implemented');
+  return endSession(sessions, id, now, true);
 }
 
 export function giveUpSession(
@@ -42,16 +69,27 @@ export function giveUpSession(
   id: string,
   now: number
 ): Session[] {
-  throw new Error('not implemented');
+  return endSession(sessions, id, now, false);
 }
 
 export function finalizeDangling(
   sessions: Session[],
   now: number
 ): { sessions: Session[]; resumeId: string | null; changed: boolean } {
-  throw new Error('not implemented');
+  let resumeId: string | null = null;
+  let changed = false;
+  const out = sessions.map((s) => {
+    if (s.endedAt !== null) return s;
+    if (now - s.startedAt < SESSION_SECONDS * 1000) {
+      resumeId = s.id;
+      return s;
+    }
+    changed = true;
+    return { ...s, endedAt: s.startedAt + SESSION_SECONDS * 1000, completed: false };
+  });
+  return { sessions: changed ? out : sessions, resumeId, changed };
 }
 
 export function doneCountForDay(sessions: Session[], dateKey: string): number {
-  throw new Error('not implemented');
+  return sessions.filter((s) => s.completed && s.dateKey === dateKey).length;
 }
