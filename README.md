@@ -1,4 +1,4 @@
-# 10MinutesGoals
+# Decade Long Goals {Nothing Else Matterz}
 
 a simple app for focussed work
 
@@ -6,7 +6,7 @@ The core is **one decade-long goal** — the north star. The 10-minute session i
 
 The rule of tens: **10 seconds to commit · 10 taps to evolve · 10 minutes to act · 10 years to arrive.**
 
-(How the project got here — including its own gaps — is in [EVOLUTION.md](EVOLUTION.md). What this version promises and refuses to promise is in [REQUIREMENTS.md](REQUIREMENTS.md).)
+(How the project got here — including its own gaps — is in [EVOLUTION.md](docs/EVOLUTION.md). What this version promises and refuses to promise is in [REQUIREMENTS.md](docs/REQUIREMENTS.md).)
 
 ## What it does
 
