@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "10MinutesGoals",
-    "slug": "10minutesgoals",
+    "name": "Decade Long Goals {Nothing Else Matterz}",
+    "slug": "decade-long-goals",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,6 +11,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.nothingelsematterz.decadelonggoals",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
